@@ -1,11 +1,11 @@
-package com.avasopht.mightyParser.traversing;
+package mighty.traversing;
 
-import com.avasopht.mightyParser.structure.Node;
+import mighty.structure.Node;
 
 public class Lexeme {
   public final int    start;
   public final int    end;
-  public final Node   grammar;
+  public final Node grammar;
   public final String string;
 
   public Lexeme(Node _grammar, String s, int _start, int _end) {

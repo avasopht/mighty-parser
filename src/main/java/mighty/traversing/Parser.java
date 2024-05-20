@@ -1,13 +1,16 @@
-package com.avasopht.mightyParser.traversing;
+package mighty.traversing;
+
+import mighty.structure.Node;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Stack;
 
-import com.avasopht.mightyParser.structure.Node;
-
 public class Parser {
+  public record Result(int readCharacters, ParseCons parseTree) {
+  }
+
   private static boolean DEBUGGING = false;
 
   private static void DEBUG_OUT(String s, int stackLevel) {
@@ -44,6 +47,9 @@ public class Parser {
   }
 
   public static boolean isValid(Node grammar) {
+    // Traverses every node and ensures there is an end node.
+    // However, it does not ensure that every path leads to an end node.
+    // Maybe the algorithm can be changes do that every node without edges is treated as an end node.
 
     List<Node> openList = new ArrayList<Node>();
     Collection<Node> closedList = new ArrayList<Node>();
@@ -83,8 +89,7 @@ public class Parser {
         } else if (n.size() == 1) {
           n = n.get(0);
         } else {
-          System.err
-              .println("Line should be unreachable! Please report to www.konelabs.org");
+          System.err.println("Line should be unreachable!");
           return false;
         }
       }
@@ -94,14 +99,13 @@ public class Parser {
   }
 
   private static Node findEnd(Node start) {
-    ArrayList<Node> openList = new ArrayList<Node>();
-    ArrayList<Node> closedList = new ArrayList<Node>();
+
+    UniqueQueue<Node> openList = new UniqueQueue<>();
 
     openList.add(start);
 
-    while (openList.size() > 0) {
-      Node n = openList.remove(0);
-      closedList.add(n);
+    while (!openList.isEmpty()) {
+      Node n = openList.removeNext();
 
       if (n.isEnd()) {
         return n;
@@ -117,7 +121,7 @@ public class Parser {
         }
       }
 
-      if (!(openList.contains(n) || closedList.contains(n))) {
+      if (!openList.hasVisited(n)) {
         openList.add(n);
       }
     }
@@ -125,20 +129,41 @@ public class Parser {
     return null;
   }
 
-  public static int parse(String s, Node grammar) {
+  public static int parse(String s, final Node grammar) {
+    Result result =  parseR(s, grammar);
+
+    System.out.println("<Result>");
+    for(ParseCons ptr = result.parseTree; ptr != null; ptr = ptr.getNext()) {
+      if(ptr.hasFlag("show")) {
+        System.out.println(ptr.getOperation());
+      }
+    }
+    System.out.println("</Result>");
+
+    return result.readCharacters;
+  }
+  public static Result parseR(String s, final Node grammar) {
+
     if (!isValid(grammar)) {
       if (DEBUGGING) {
         DEBUG_ERR("Invalid grammar!");
       }
-      return -1;
+      return new Result(-1, null);
     }
 
     Node endNode = findEnd(grammar);
 
-    Stack<ChoiceRecord> choiceStack = new Stack<ChoiceRecord>();
-    Stack<Node> returnStack = new Stack<Node>();
+    Node ptr = grammar;
+
+    Stack<ChoiceRecord> choiceStack = new Stack<>();
+    Stack<Node> returnStack = new Stack<>();
     int max = 0;
     int index = 0;
+
+    ParseCons parsePtr = new ParseCons();
+
+    parsePtr = parsePtr.parent(null);
+    parsePtr = parsePtr.visit(ptr);
 
     while (index <= s.length()) {
 
@@ -149,54 +174,74 @@ public class Parser {
         c = '\0';
       }
 
-      if (grammar == endNode) {
+      if (ptr == endNode) {
         if (max < index) {
           max = index;
         }
       }
 
-      if (grammar == endNode && index == s.length()) {
-        return max;
+      if (ptr == endNode && index == s.length()) {
+        // # End node (and last character of stream).
+        return new Result(max, parsePtr.reversed());
       }
 
-      if (grammar.isTerminal() && (c == grammar.getChar())) {
+      if (ptr.isTerminal() && (c == ptr.getChar())) {
+        // # Terminal node.
         if (DEBUGGING) {
           DEBUG_OUT("Caught '" + c + "'", choiceStack.size());
         }
+
         ++index;
-
-        grammar = grammar.get(0);
-      } else if (grammar.hasChild()) {
+        ptr = ptr.get(0);
+        parsePtr = parsePtr.visit(ptr);
+      } else if (ptr.hasChild()) {
+        // # Parent node.
         if (DEBUGGING) {
-          DEBUG_OUT("Entered " + grammar, choiceStack.size());
+          DEBUG_OUT("Entered " + ptr, choiceStack.size());
         }
 
-        returnStack.push(grammar);
-        grammar = grammar.getChild();
-      } else if (grammar.size() == 1 && !grammar.isTerminal()
-          && !grammar.hasChild()) {
+
+        returnStack.push(ptr);
+        parsePtr = parsePtr.parent(ptr);
+
+        ptr = ptr.getChild();
+        parsePtr = parsePtr.visit(ptr);
+      } else if (ptr.size() == 1 && !ptr.isTerminal()
+          && !ptr.hasChild()) {
+        // Choice node (1 option)
         if (DEBUGGING) {
-          DEBUG_OUT("Travel " + grammar + ", no choice", choiceStack.size());
+          DEBUG_OUT("Travel " + ptr + ", no choice", choiceStack.size());
         }
-        grammar = grammar.get(0);
-      } else if (grammar.size() > 1) {
+
+        ptr = ptr.get(0);
+        parsePtr = parsePtr.visit(ptr);
+      } else if (ptr.size() > 1) {
+        // # Choice node (>1 option)
         if (DEBUGGING) {
-          DEBUG_OUT("Choice taken at " + grammar, choiceStack.size());
+          DEBUG_OUT("Choice taken at " + ptr, choiceStack.size());
         }
-        ChoiceRecord record = new ChoiceRecord(grammar, 0, index, returnStack);
+        ChoiceRecord record = new ChoiceRecord(ptr, 0, index, parsePtr, returnStack);
         choiceStack.push(record);
-        grammar = grammar.get(0);
-      } else if (grammar.isEnd() && returnStack.size() > 0) {
+
+        ptr = ptr.get(0);
+        parsePtr = parsePtr.visit(ptr);
+      } else if (ptr.isEnd() && !returnStack.isEmpty()) {
+        // # End node
         if (DEBUGGING) {
           DEBUG_OUT("Pop return stack", choiceStack.size());
         }
-        grammar = returnStack.pop().get(0);
-      } else if ((grammar.isTerminal() && (c != grammar.getChar()))
-          || grammar.isEnd()) {
+
+        Node parent = returnStack.pop();
+        parsePtr = parsePtr.end(parent);
+
+        ptr = parent.get(0);
+        parsePtr = parsePtr.visit(ptr);
+      } else if ((ptr.isTerminal() && (c != ptr.getChar()))
+          || ptr.isEnd()) {
         boolean die = true;
 
         // backtrack or die
-        while (choiceStack.size() > 0 && die) {
+        while (!choiceStack.isEmpty() && die) {
           ChoiceRecord record = choiceStack.pop();
 
           if (DEBUGGING) {
@@ -206,33 +251,35 @@ public class Parser {
           if ((record.choice + 1) < record.node.size()) {
             int newChoice = record.choice + 1;
             index = record.index;
-            grammar = record.node;
+            ptr = record.node;
             returnStack = record.stack;
+            parsePtr = record.parsePtr;
 
-            record = new ChoiceRecord(grammar, newChoice, index, returnStack);
+            record = new ChoiceRecord(ptr, newChoice, index, parsePtr, returnStack);
             choiceStack.push(record);
 
             if (DEBUGGING) {
               DEBUG_OUT("Took alternative choice " + newChoice + " at "
-                  + grammar, choiceStack.size());
+                  + ptr, choiceStack.size());
             }
 
             die = false;
-            grammar = grammar.get(newChoice);
+            ptr = ptr.get(newChoice);
+            parsePtr = parsePtr.visit(ptr);
           }
         }
 
         if (die) {
           if (DEBUGGING) {
-            DEBUG_OUT("Died", choiceStack.size());
+            DEBUG_OUT("Died", 0);
           }
-          return max;
+          return new Result(max, parsePtr.reversed());
         }
       } else {
-        return -1;
+        return new Result(-1, null);
       }
     }
 
-    return -1;
+    return new Result(-1, null);
   }
 }

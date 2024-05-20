@@ -1,4 +1,4 @@
-package com.avasopht.mightyParser.structure;
+package mighty.structure;
 
 public class RepetitionFactory {
   public static Node createRepetition(Node n) {

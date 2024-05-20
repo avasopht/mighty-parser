@@ -9,5 +9,6 @@
         <module name="mighty-parser" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel target="20" />
   </component>
 </project>

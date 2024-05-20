@@ -1,4 +1,4 @@
-package com.avasopht.mightyParser.structure;
+package mighty.structure;
 
 import java.util.List;
 

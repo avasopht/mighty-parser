@@ -1,22 +1,22 @@
-package com.avasopht.mightyParser;
+package mighty;
 
 import java.util.ArrayList;
 
-import com.avasopht.mightyParser.structure.ChoiceFactory;
-import com.avasopht.mightyParser.structure.ListFactory;
-import com.avasopht.mightyParser.structure.Node;
-import com.avasopht.mightyParser.structure.OptionFactory;
-import com.avasopht.mightyParser.structure.RepetitionFactory;
-import com.avasopht.mightyParser.structure.TerminalFactory;
-import com.avasopht.mightyParser.traversing.Lexeme;
-import com.avasopht.mightyParser.traversing.Parser;
+import mighty.structure.ChoiceFactory;
+import mighty.structure.ListFactory;
+import mighty.structure.Node;
+import mighty.structure.OptionFactory;
+import mighty.structure.RepetitionFactory;
+import mighty.structure.TerminalFactory;
+import mighty.traversing.Lexeme;
+import mighty.traversing.Parser;
 
 public class Main {
   public static void main(String argv[]) {
-    ArrayList<Node> sentenceList = new ArrayList<Node>();
-    ArrayList<Node> anotherWordList = new ArrayList<Node>();
-    ArrayList<Node> wordList = new ArrayList<Node>();
-    ArrayList<Node> whitespaceList = new ArrayList<Node>();
+    ArrayList<Node> sentenceList = new ArrayList<>();
+    ArrayList<Node> anotherWordList = new ArrayList<>();
+    ArrayList<Node> wordList = new ArrayList<>();
+    ArrayList<Node> whitespaceList = new ArrayList<>();
 
     Node whitespace;
     Node word;
@@ -37,7 +37,7 @@ public class Main {
     anotherWordList.add(whitespace);
     anotherWordList.add(word);
     anotherWord = ListFactory.createList(anotherWordList);
-    anotherWord.setName("ANOTHER_WORD");
+//    anotherWord = ListFactory.createList(anotherWordList).contain("<another-word>","</another-word>");
 
     sentenceList.add(word);
     sentenceList.add(RepetitionFactory.createRepetition(anotherWord));
@@ -61,7 +61,7 @@ public class Main {
     System.out.println("Time taken: " + ((float) start / 1000000000f)
         + " seconds");
 
-    ArrayList<Node> grammars = new ArrayList<Node>();
+    ArrayList<Node> grammars = new ArrayList<>();
     grammars.add(sentence);
     grammars.add(whitespace);
     grammars.add(anotherWord);

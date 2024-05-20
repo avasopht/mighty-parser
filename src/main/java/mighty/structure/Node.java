@@ -1,6 +1,7 @@
-package com.avasopht.mightyParser.structure;
+package mighty.structure;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 public class Node {
@@ -21,7 +22,8 @@ public class Node {
 
   private void initialize() {
     child = null;
-    edges = new ArrayList<Node>();
+    flags = new HashSet<>();
+    edges = new ArrayList<>();
     name = null;
     isSignificant = false;
   }
@@ -41,6 +43,31 @@ public class Node {
     } else {
       return "";
     }
+  }
+
+  public void addFlag(String flag) {
+    flags.add(flag.toLowerCase());
+  }
+
+  public boolean hasFlag(String flag) {
+    return flags.contains(flag.toLowerCase());
+  }
+
+  public Node withFlag(String flag) {
+    addFlag(flag);
+    return this;
+  }
+
+  public Node contain(String containerName, String endName) {
+    Node container = new Node().withFlag("show").withName(containerName);
+    container.setChild(this);
+    container.add(new Node().withFlag("show").withName(endName));
+    return container;
+  }
+
+  public Node withName(String name) {
+    setName(name);
+    return this;
   }
 
   // Getters and setters: ---------------------------------------------------
@@ -93,6 +120,7 @@ public class Node {
 
   private final char term;
   private Node       child;
+  private HashSet<String> flags;
   private List<Node> edges;
   private String     name;
   boolean            isSignificant;

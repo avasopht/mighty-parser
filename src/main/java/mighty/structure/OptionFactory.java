@@ -1,4 +1,4 @@
-package com.avasopht.mightyParser.structure;
+package mighty.structure;
 
 public class OptionFactory {
   public static Node createOptional(Node n) {

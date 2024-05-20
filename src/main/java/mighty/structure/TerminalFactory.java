@@ -1,4 +1,4 @@
-package com.avasopht.mightyParser.structure;
+package mighty.structure;
 
 public class TerminalFactory {
   public static Node createTerminalString(String s) {
